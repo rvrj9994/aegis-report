@@ -14,6 +14,11 @@ on:
     # 15:30 UTC = 11:30 ET (EDT, summer) / 10:30 ET (EST, winter), Mon–Fri.
     # Comfortably after the 09:45 ET morning report in both DST regimes.
     - cron: "30 15 * * 1-5"
+  push:
+    # Git-based self-test: modify .github/SELFTEST and push to fire a live forced
+    # test alert. The bot's report pushes never touch this path, so they never trigger.
+    paths:
+      - ".github/SELFTEST"
   workflow_dispatch:
     inputs:
       force_alert:
@@ -32,5 +37,6 @@ jobs:
       - name: Check live-report freshness
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          FORCE_ALERT: ${{ github.event.inputs.force_alert }}
+          # Forced when fired via the self-test push, or when the dispatch checkbox is ticked.
+          FORCE_ALERT: ${{ github.event_name == 'push' || github.event.inputs.force_alert == 'true' }}
         run: python3 .github/watchdog.py

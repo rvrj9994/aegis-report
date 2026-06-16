@@ -44,7 +44,7 @@ def discord(title, desc, color):
     wh = os.environ.get("DISCORD_WEBHOOK_URL", "")
     if not wh:
         print("No DISCORD_WEBHOOK_URL secret set — relying on GitHub job-failure email.")
-        return
+        return False
     body = json.dumps({
         "username": "AEGIS Watchdog",
         "embeds": [{"title": title, "description": desc, "color": color}],
@@ -55,8 +55,10 @@ def discord(title, desc, color):
             headers={"Content-Type": "application/json", "User-Agent": "aegis-watchdog"},
         ), timeout=25)
         print("Discord alert sent.")
+        return True
     except Exception as e:
         print(f"Discord send failed: {e}")
+        return False
 
 
 def main():
@@ -98,14 +100,20 @@ def main():
         return 0
 
     if force:
-        discord(
+        ok = discord(
             "🟢 AEGIS Watchdog — TEST alert (forced)",
             f"This is a forced test of the external watchdog. The last live-report publish "
             f"was **{commit_et:%a %b %d %H:%M ET}** ({age_h:.0f}h ago).\n{PAGES}",
             0x2ECC71,
         )
-        print("Forced test complete.")
-        return 0
+        if ok:
+            print("Forced test complete — Discord card delivered.")
+            return 0
+        # Non-zero so the run CONCLUSION (readable via the public API) flags a
+        # missing/invalid DISCORD_WEBHOOK_URL secret even though it's a 'test'.
+        print("Forced test FAILED — no/invalid DISCORD_WEBHOOK_URL secret. Add it in "
+              "repo Settings -> Secrets and variables -> Actions.")
+        return 1
 
     discord(
         "🔴 AEGIS Watchdog — bot may be DOWN",
