@@ -1,0 +1,36 @@
+name: AEGIS Watchdog
+
+# External, off-Mac liveness monitor. The trading bot publishes a fresh commit to this
+# repo every weekday ~09:45 ET. This job runs on GitHub's own infrastructure (so it
+# survives a total Mac/power failure) and alerts if NO commit landed on a trading day —
+# i.e. the Mac/bot never started. Logic lives in .github/watchdog.py.
+#
+# One-time setup: add a repository secret DISCORD_WEBHOOK_URL (Settings → Secrets and
+# variables → Actions) so alerts reach Discord. Without it, the job still fails on a real
+# outage and GitHub emails the repo owner.
+
+on:
+  schedule:
+    # 15:30 UTC = 11:30 ET (EDT, summer) / 10:30 ET (EST, winter), Mon–Fri.
+    # Comfortably after the 09:45 ET morning report in both DST regimes.
+    - cron: "30 15 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force_alert:
+        description: "Send a TEST alert regardless of report freshness"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check live-report freshness
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          FORCE_ALERT: ${{ github.event.inputs.force_alert }}
+        run: python3 .github/watchdog.py
