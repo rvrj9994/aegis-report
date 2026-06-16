@@ -4,4 +4,4 @@ Modify this file (bump the nonce) and `git push origin main` to fire a live, for
 watchdog run. It verifies the DISCORD_WEBHOOK_URL secret + Discord delivery end-to-end:
 the run CONCLUSION is success only if the Discord card actually sent, failure otherwise.
 
-nonce: 1
+nonce: 2
